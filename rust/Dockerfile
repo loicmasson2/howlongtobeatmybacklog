@@ -3,6 +3,9 @@ FROM rust:slim-bookworm
 # Add wasm target
 RUN rustup target add wasm32-unknown-unknown
 
+# Install cargo-watch
+RUN cargo install cargo-watch
+
 # Install wasm-pack for testing
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
