@@ -1,2 +1,2 @@
 start:
-	cargo watch -w ./src  -s "trunk serve"
+	cargo watch -w ./src  -s "trunk serve "

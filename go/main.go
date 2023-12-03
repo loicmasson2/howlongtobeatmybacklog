@@ -65,8 +65,25 @@ type Document struct {
 	} `json:"games"`
 }
 
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func main() {
 	r := gin.Default()
+	r.Use(CORSMiddleware())
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
@@ -75,7 +92,7 @@ func main() {
 	r.GET("/games", func(c *gin.Context) {
 		const SteamId string = "76561198000800114"
 		const SteamKey string = "8FEF865E63A65A65E8C79C69CCDC1034"
-		url := fmt.Sprintf("http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=%s&steamid=%s&format=json", SteamKey, SteamId)
+		url := fmt.Sprintf("http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=%s&steamid=%s&format=json&include_appinfo=true", SteamKey, SteamId)
 
 		resp, err := http.Get(url)
 		if err != nil {
@@ -127,6 +144,12 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		model := mongo.IndexModel{Keys: bson.D{{"games.name", "text"}}}
+		name, err := coll.Indexes().CreateOne(context.TODO(), model)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Name of index created: " + name)
 
 		fmt.Printf("%d documents inserted with IDs:\n", len(result.InsertedIDs))
 		for _, id := range result.InsertedIDs {
@@ -135,8 +158,47 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"data": len(result.InsertedIDs)})
 
 	})
+	//r.GET("/get-games-from-db/:steamid", func(c *gin.Context) {
+	//	monitor := &event.CommandMonitor{
+	//		Started: func(_ context.Context, e *event.CommandStartedEvent) {
+	//			fmt.Println(e.Command)
+	//		},
+	//		Succeeded: func(_ context.Context, e *event.CommandSucceededEvent) {
+	//			fmt.Println(e.Reply)
+	//		},
+	//		Failure: func(_ context.Context, e *event.CommandFailedEvent) {
+	//			fmt.Println(e.Failure)
+	//		},
+	//	}
+	//
+	//	opts := options.Client().SetMonitor(monitor).ApplyURI("mongodb://root:example@mongo:27017")
+	//	steamid := c.Param("steamid")
+	//	search := c.DefaultQuery("search", "")
+	//	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	//	defer cancel()
+	//	client, err := mongo.Connect(ctx, opts)
+	//	defer func() {
+	//		if err = client.Disconnect(ctx); err != nil {
+	//			panic(err)
+	//		}
+	//	}()
+	//	fmt.Println("Name of index created: " + search)
+	//
+	//	collection := client.Database("howlongtobeatmybacklog").Collection("documents")
+	//	matchStage := bson.D{{"$match", bson.D{{"$name_text", bson.D{{"$search", "herb"}}}}}}
+	//	filter := bson.D{{"steam_id", steamid}}
+	//	var document []Game
+	//	err = collection.Aggregate(context.TODO(), mongo.Pipeline{filter, matchStage}).Decode(&document)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	fmt.Printf("%s", collection)
+	//	c.JSON(http.StatusOK, gin.H{"data": document})
+	//})
 	r.GET("/get-games-from-db/:steamid", func(c *gin.Context) {
 		steamid := c.Param("steamid")
+		search := c.DefaultQuery("search", "")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://root:example@mongo:27017"))
@@ -145,17 +207,52 @@ func main() {
 				panic(err)
 			}
 		}()
+		fmt.Println("Name of index created: " + search)
 
 		collection := client.Database("howlongtobeatmybacklog").Collection("documents")
-		filter := bson.D{{"steam_id", steamid}}
-		var document Document
-		err = collection.FindOne(context.TODO(), filter).Decode(&document)
+		//filter := bson.D{
+		//	{"steam_id", steamid},
+		//	{"games", bson.D{
+		//		{"name", "Earth 2160"},
+		//	}},
+		//}
+		matchStage := bson.D{{"$match", bson.D{{"steam_id", steamid}}}}
+		//unwindStage := bson.D{
+		//	"$unwind": "$games",
+		//}
+		unwind := bson.D{
+			{
+				"$unwind", bson.D{
+					{
+						"path", "$games",
+					},
+				},
+			},
+		}
+		//unwindStage := bson.D{{"$unwind": bson.M{"games"}}}
+		filterStage := bson.D{{"$match", bson.D{{"name", search}}}}
+
+		//var document Document
+		cursor, err := collection.Aggregate(context.TODO(), mongo.Pipeline{matchStage, unwind, filterStage})
+
+		var results []Game
+		if err = cursor.All(context.TODO(), &results); err != nil {
+			fmt.Println("ERROR")
+
+			log.Fatal(err)
+		}
+		fmt.Println("RESULTs")
+		fmt.Println(results)
+		for _, result := range results {
+			fmt.Println("RESULT")
+			fmt.Println(result)
+		}
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		fmt.Printf("%s", collection)
-		c.JSON(http.StatusOK, gin.H{"data": document})
+		//fmt.Printf("%s", collection)
+		c.JSON(http.StatusOK, gin.H{"data": []})
 	})
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 	//	http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=8FEF865E63A65A65E8C79C69CCDC1034&steamid=76561198000800114&format=json&include_appinfo=true
