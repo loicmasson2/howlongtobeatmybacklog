@@ -5,4 +5,17 @@ docker compose up
 ```
 
 
-go reflex for dockerfiles
+Get air golang 
+
+https://adrianhesketh.com/2021/05/28/templ-hot-reload-with-air/
+
+Run with air 
+
+```
+alias air='$(go env GOPATH)/bin/air'
+```
+
+
+```
+air -c air.toml
+```

@@ -1,0 +1,37 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+bin = "./tmp/main"
+cmd = "templ generate && go build -o ./tmp/main ."
+exclude_dir = ["assets", "tmp", "vendor"]
+exclude_file = []
+exclude_regex = [".*_templ.go"]
+exclude_unchanged = true
+follow_symlink = true
+full_bin = ""
+include_dir = []
+include_ext = ["go", "tpl", "tmpl", "templ", "html"]
+log = "build-errors.log"
+send_interrupt = true
+poll = true
+poll_interval = 500 # ms
+# Delay after sending Interrupt signal
+kill_delay = 500 # nanosecond
+# It's not necessary to trigger build each time file changes if it's too frequent.
+delay = 0 # ms
+# Stop running old binary when build errors occur.
+stop_on_error = true
+
+[color]
+app = ""
+build = "yellow"
+main = "magenta"
+runner = "green"
+watcher = "cyan"
+
+[log]
+time = false
+
+[misc]
+clean_on_exit = true

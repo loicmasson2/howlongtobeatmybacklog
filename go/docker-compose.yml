@@ -24,16 +24,16 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: example
       ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
 
-  backend-howlongtobeatmybacklog:
-    image: acim/go-reflex
-    environment:
-      - RACE_DETECTOR=1
-    volumes:
-      - .:/app
-    ports:
-      - 8080:8080
-    depends_on:
-      - mongo
+#  backend-howlongtobeatmybacklog:
+#    image: acim/go-reflex
+#    environment:
+#      - RACE_DETECTOR=1
+#    volumes:
+#      - .:/app
+#    ports:
+#      - 8080:8080
+#    depends_on:
+#      - mongo
 
 volumes:
   mongodb:

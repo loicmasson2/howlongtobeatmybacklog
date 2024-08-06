@@ -1,0 +1,115 @@
+package components
+
+import "fmt"
+
+type Game struct {
+	Appid                    float64
+	ImgIconURL               string
+	Name                     string
+	PlaytimeDisconnected     float64
+	PlaytimeForever          float64
+	PlaytimeLinuxForever     float64
+	PlaytimeMacForever       float64
+	PlaytimeWindowsForever   float64
+	RtimeLastPlayed          float64
+	HasCommunityVisibleStats bool
+	ContentDescriptorids     []float64
+	HasLeaderboards          bool
+	Playtime2Weeks           float64
+}
+
+templ heading() {
+    <h1>Heading</h1>
+}
+
+templ layout(contents templ.Component) {
+	<div id="heading">
+		@heading()
+	</div>
+	<div id="contents">
+		@contents
+	</div>
+}
+
+templ Paragraph(contents string) {
+	<p>{ contents }</p>
+}
+
+templ NameList(items []Game) {
+  <div>
+    <span class="htmx-indicator loading loading-infinity loading-lg"></span>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-4 gap-y-8">
+      for _, item := range items {
+          <div class="card w-64 xl:w-96 bg-blend-multiply shadow-xl image-full">
+            <figure><img class="game_header_image_full" src={string(templ.URL(fmt.Sprintf("https://cdn.cloudflare.steamstatic.com/steam/apps/%v/header.jpg?t=1705561742", item.Appid)))}/></figure>
+            <div class="card-body">
+              <h2 class="card-title">{ item.Name }</h2>
+            </div>
+          </div>
+      }
+      </div>
+  </div>
+}
+
+templ Root(contents templ.Component) {
+	<html>
+    		<head>
+    			<meta charset="UTF-8"/>
+    			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    			<title>Howlongtobeatmybacklog</title>
+    			<script src="https://unpkg.com/htmx.org@1.9.11" integrity="sha384-0gxUXCCR8yv9FM2b+U3FDbsKthCI66oH5IA9fHppQq9DDMHuMauqq1ZHBpJxQ0J0" crossorigin="anonymous"></script>
+    			<link href="https://cdn.jsdelivr.net/npm/daisyui@4.9.0/dist/full.min.css" rel="stylesheet" type="text/css" />
+                <script src="https://cdn.tailwindcss.com"></script>
+                <style type="text/css">
+                        .htmx-indicator{
+                            opacity:0;
+                            transition: opacity 500ms ease-in;
+                        }
+                         .htmx-request .loading{
+                            display: flex;
+                            width: 24rem;
+                            margin: 0 auto;
+                        }
+                        .htmx-request.loading{
+                            display: block;
+                            width: 24rem;
+                            margin: 0 auto;
+                        }
+                        .htmx-request .htmx-indicator{
+                            opacity:1
+                        }
+                        .htmx-request.htmx-indicator{
+                            opacity:1
+                        }
+                        .htmx-request .grid{
+                            opacity:0;
+                            display: none;
+                        }
+                        .htmx-request.grid{
+                            opacity:0
+                            display: none;
+                        }
+                        .loading {
+                            display:flex;
+                        }
+                	</style>
+    		</head>
+    		<header class="m-4">
+              <h1>Howlongtobeatmybacklog</h1>
+            </header>
+    		<body class="m-4">
+                <input class="form-control input input-bordered input-primary w-full max-w-xs" type="search"
+                    name="search" placeholder="Begin Typing To Search Users..."
+                    hx-post="/search"
+                    hx-trigger="input changed delay:500ms, search"
+                    hx-target="#contents"
+                    hx-indicator="#contents" />
+                <div id="contents">
+                    @contents
+                </div>
+    		</body>
+    		<footer>
+    		    <p>footer</p>
+    		</footer>
+    	</html>
+}
